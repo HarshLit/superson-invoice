@@ -209,9 +209,55 @@ class InvoiceGenerator {
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
         doc.text('SUPER SON ENTERPRISE', 15, 38);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Quality Products at Best Rates', 15, 45);
+        
+        // Add logo image instead of text - with proper async handling
+        const img = new Image();
+        img.crossOrigin = 'anonymous'; // Enable CORS for canvas operations
+        img.onload = () => {
+            try {
+                // Convert image to base64 using canvas
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                const dataURL = canvas.toDataURL('image/jpeg', 0.9);
+                
+                // Calculate proper dimensions maintaining aspect ratio
+                const originalWidth = img.width;
+                const originalHeight = img.height;
+                const aspectRatio = originalWidth / originalHeight;
+                
+                // Set target height and calculate width to maintain aspect ratio
+                const targetHeight = 25; // Increased height significantly for better visibility
+                const targetWidth = targetHeight * aspectRatio;
+                
+                // Add the logo image with proper aspect ratio
+                doc.addImage(dataURL, 'JPEG', 15, 42, targetWidth, targetHeight);
+                this.completePDFGeneration(doc, data);
+            } catch (error) {
+                console.error('Error converting image to base64:', error);
+                // Fall back to text if image conversion fails
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'normal');
+                doc.text('Quality Products at Best Rates', 15, 45);
+                this.completePDFGeneration(doc, data);
+            }
+        };
+        img.onerror = () => {
+            // If image fails to load, show text as fallback
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Quality Products at Best Rates', 15, 45);
+            this.completePDFGeneration(doc, data);
+        };
+        img.src = 'Our Logo.jpg';
+        
+        // Return early since PDF generation will complete asynchronously
+        return;
+    }
+
+    completePDFGeneration(doc, data) {
         
         // Invoice title without background
         doc.setTextColor(41, 128, 185); // Blue text only
@@ -228,8 +274,8 @@ class InvoiceGenerator {
         doc.text('Aligarh', 190, 53, { align: 'right' });
         doc.text('202001', 190, 58, { align: 'right' });
 
-        // Create aligned section layout - reduced heights
-        const sectionY = 65; // Moved up further to save space
+        // Create aligned section layout - positioned right after logo ends
+        const sectionY = 70; // Start right after logo image (42 + 25 + small gap)
         const sectionHeight = 35; // Reduced from 45 to 35
         const headerHeight = 8; // Reduced from 12 to 8
         
