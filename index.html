@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Generator - Super Son Enterprise</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Super Son Enterprise - Invoice Generator</h1>
+        </header>
+
+        <div class="form-container">
+            <form id="invoiceForm">
+                <!-- Invoice Details -->
+                <div class="form-section">
+                    <h2>Invoice Details</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="invoiceNumber">Invoice Number:</label>
+                            <input type="text" id="invoiceNumber" name="invoiceNumber" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="invoiceDate">Date:</label>
+                            <input type="date" id="invoiceDate" name="invoiceDate" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bill To Section -->
+                <div class="form-section">
+                    <h2>Bill To</h2>
+                    <div class="form-group">
+                        <label for="customerName">Customer Name:</label>
+                        <input type="text" id="customerName" name="customerName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="customerAddress">Address:</label>
+                        <textarea id="customerAddress" name="customerAddress" rows="3" required></textarea>
+                    </div>
+                </div>
+
+                <!-- Items Section -->
+                <div class="form-section">
+                    <h2>Items</h2>
+                    <div class="items-container">
+                        <table id="itemsTable">
+                            <thead>
+                                <tr>
+                                    <th>SR NO</th>
+                                    <th>Description</th>
+                                    <th>Size</th>
+                                    <th>QTY</th>
+                                    <th>Price</th>
+                                    <th>Amount</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemsTableBody">
+                                <!-- Items will be added dynamically -->
+                            </tbody>
+                        </table>
+                        <button type="button" id="addItem" class="btn btn-secondary">Add Item</button>
+                    </div>
+                </div>
+
+                <!-- Payment Section -->
+                <div class="form-section">
+                    <h2>Payment Details</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="subtotal">Subtotal:</label>
+                            <input type="number" id="subtotal" name="subtotal" step="0.01" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="advance">Advance:</label>
+                            <input type="number" id="advance" name="advance" step="0.01" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="total">Total Amount To Pay:</label>
+                            <input type="number" id="total" name="total" step="0.01" readonly>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="form-actions">
+                    <button type="button" id="saveInvoice" class="btn btn-primary">Save Invoice</button>
+                    <button type="button" id="generatePDF" class="btn btn-success">Generate PDF</button>
+                    <button type="button" id="loadInvoice" class="btn btn-info">Load Saved Invoice</button>
+                    <button type="button" id="clearForm" class="btn btn-warning">Clear Form</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Saved Invoices -->
+        <div class="saved-invoices">
+            <h2>Saved Invoices</h2>
+            <div id="savedInvoicesList"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
