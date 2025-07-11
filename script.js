@@ -361,43 +361,105 @@ class InvoiceGenerator {
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(0, 0, 0); // Black text
 
-        // Items with individual cell borders - dynamic row height based on description
+        // Group items by description
+        const groupedItems = {};
         data.items.forEach((item, index) => {
-            const baseItemHeight = 8; // Reduced from 10 to 8
-            const maxDescriptionWidth = colWidths[1] - 4; // Description column width minus padding
+            if (!groupedItems[item.description]) {
+                groupedItems[item.description] = [];
+            }
+            groupedItems[item.description].push({...item, originalIndex: index});
+        });
+
+        // Items with individual cell borders - dynamic row height based on description and grouping
+        let currentSrNo = 1;
+        Object.keys(groupedItems).forEach(description => {
+            const items = groupedItems[description];
+            const baseItemHeight = 8;
+            const maxDescriptionWidth = colWidths[1] - 4;
             
             // Calculate how many lines the description needs
             doc.setFontSize(8);
-            const descriptionLines = doc.splitTextToSize(item.description, maxDescriptionWidth);
-            const requiredHeight = Math.max(baseItemHeight, descriptionLines.length * 3 + 3); // 3px per line + padding (reduced)
+            const descriptionLines = doc.splitTextToSize(description, maxDescriptionWidth);
             
-            // Draw individual cells for each item with dynamic height
-            colPositions.forEach((pos, colIndex) => {
-                doc.rect(pos, yPos - 5, colWidths[colIndex], requiredHeight);
-            });
-            
-            // Position text content - properly centered vertically
-            const cellCenterY = yPos - 5 + (requiredHeight / 2); // Center of the cell
-            doc.setFontSize(8);
-            doc.text(item.srNo.toString(), 17, cellCenterY);
-            
-            // Handle multi-line description - center the block of text
-            if (descriptionLines.length > 1) {
-                const totalDescHeight = descriptionLines.length * 3;
-                const descStartY = cellCenterY - (totalDescHeight / 2) + 1;
-                descriptionLines.forEach((line, lineIndex) => {
-                    doc.text(line, 30, descStartY + (lineIndex * 3));
+            if (items.length === 1) {
+                // Single item - display normally
+                const item = items[0];
+                const requiredHeight = Math.max(baseItemHeight, descriptionLines.length * 3 + 3);
+                
+                // Draw individual cells for the item
+                colPositions.forEach((pos, colIndex) => {
+                    doc.rect(pos, yPos - 5, colWidths[colIndex], requiredHeight);
                 });
+                
+                // Position text content - properly centered vertically
+                const cellCenterY = yPos - 5 + (requiredHeight / 2);
+                doc.setFontSize(8);
+                doc.text(currentSrNo.toString(), 17, cellCenterY);
+                
+                // Handle multi-line description
+                if (descriptionLines.length > 1) {
+                    const totalDescHeight = descriptionLines.length * 3;
+                    const descStartY = cellCenterY - (totalDescHeight / 2) + 1;
+                    descriptionLines.forEach((line, lineIndex) => {
+                        doc.text(line, 30, descStartY + (lineIndex * 3));
+                    });
+                } else {
+                    doc.text(description, 30, cellCenterY);
+                }
+                
+                doc.text(item.size, 92, cellCenterY);
+                doc.text(item.qty.toString(), 117, cellCenterY);
+                doc.text(item.price.toFixed(0), 137, cellCenterY);
+                doc.text(`Rs ${item.amount.toFixed(0)}`, 160, cellCenterY);
+                yPos += requiredHeight;
+                currentSrNo++;
             } else {
-                doc.text(item.description, 30, cellCenterY);
+                // Multiple items with same description - group them
+                const itemRowHeight = 8; // Height for each size/qty/price/amount row
+                const groupRequiredHeight = Math.max(items.length * itemRowHeight, descriptionLines.length * 3 + 6);
+                
+                // Draw cells for the entire group
+                colPositions.forEach((pos, colIndex) => {
+                    doc.rect(pos, yPos - 5, colWidths[colIndex], groupRequiredHeight);
+                });
+                
+                // Add horizontal borders to separate each item row within the group
+                for (let i = 1; i < items.length; i++) {
+                    const borderY = yPos - 5 + (i * itemRowHeight);
+                    // Only draw horizontal lines in size, qty, price, amount columns (skip SR NO and description)
+                    for (let colIndex = 2; colIndex < colPositions.length; colIndex++) {
+                        doc.line(colPositions[colIndex], borderY, colPositions[colIndex] + colWidths[colIndex], borderY);
+                    }
+                }
+                
+                // Position description (first two columns content) - centered vertically
+                const groupCenterY = yPos - 5 + (groupRequiredHeight / 2);
+                doc.setFontSize(8);
+                doc.text(currentSrNo.toString(), 17, groupCenterY);
+                
+                // Handle multi-line description in center
+                if (descriptionLines.length > 1) {
+                    const totalDescHeight = descriptionLines.length * 3;
+                    const descStartY = groupCenterY - (totalDescHeight / 2) + 1;
+                    descriptionLines.forEach((line, lineIndex) => {
+                        doc.text(line, 30, descStartY + (lineIndex * 3));
+                    });
+                } else {
+                    doc.text(description, 30, groupCenterY);
+                }
+                
+                // Display multiple sizes, quantities, prices and amounts - each row vertically centered
+                items.forEach((item, itemIndex) => {
+                    const rowCenterY = yPos - 5 + (itemIndex * itemRowHeight) + (itemRowHeight / 2);
+                    doc.text(item.size, 92, rowCenterY);
+                    doc.text(item.qty.toString(), 117, rowCenterY);
+                    doc.text(item.price.toFixed(0), 137, rowCenterY);
+                    doc.text(`Rs ${item.amount.toFixed(0)}`, 160, rowCenterY);
+                });
+                
+                yPos += groupRequiredHeight;
+                currentSrNo++;
             }
-            
-            // Center all other content vertically
-            doc.text(item.size, 92, cellCenterY);
-            doc.text(item.qty.toString(), 117, cellCenterY);
-            doc.text(item.price.toFixed(0), 137, cellCenterY);
-            doc.text(`Rs ${item.amount.toFixed(0)}`, 160, cellCenterY);
-            yPos += requiredHeight;
         });
         
         // Store final items table position for connecting totals
