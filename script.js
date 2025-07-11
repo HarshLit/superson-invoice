@@ -376,24 +376,27 @@ class InvoiceGenerator {
                 doc.rect(pos, yPos - 5, colWidths[colIndex], requiredHeight);
             });
             
-            // Position text content
-            const textY = yPos - 2 + (requiredHeight / 2); // Center vertically
+            // Position text content - properly centered vertically
+            const cellCenterY = yPos - 5 + (requiredHeight / 2); // Center of the cell
             doc.setFontSize(8);
-            doc.text(item.srNo.toString(), 17, textY);
+            doc.text(item.srNo.toString(), 17, cellCenterY);
             
-            // Handle multi-line description
+            // Handle multi-line description - center the block of text
             if (descriptionLines.length > 1) {
+                const totalDescHeight = descriptionLines.length * 3;
+                const descStartY = cellCenterY - (totalDescHeight / 2) + 1;
                 descriptionLines.forEach((line, lineIndex) => {
-                    doc.text(line, 30, yPos + (lineIndex * 3)); // Reduced spacing
+                    doc.text(line, 30, descStartY + (lineIndex * 3));
                 });
             } else {
-                doc.text(item.description, 30, textY);
+                doc.text(item.description, 30, cellCenterY);
             }
             
-            doc.text(item.size, 92, textY);
-            doc.text(item.qty.toString(), 117, textY);
-            doc.text(item.price.toFixed(0), 137, textY);
-            doc.text(`Rs ${item.amount.toFixed(0)}`, 160, textY);
+            // Center all other content vertically
+            doc.text(item.size, 92, cellCenterY);
+            doc.text(item.qty.toString(), 117, cellCenterY);
+            doc.text(item.price.toFixed(0), 137, cellCenterY);
+            doc.text(`Rs ${item.amount.toFixed(0)}`, 160, cellCenterY);
             yPos += requiredHeight;
         });
         
@@ -407,36 +410,42 @@ class InvoiceGenerator {
         
         let totalsY = totalsStartY; // Start after thank you message
         
-        // SUBTOTAL - compact layout
+        // SUBTOTAL - compact layout with vertical line
         doc.setFillColor(41, 128, 185); // Blue color
         doc.rect(totalX, totalsY, totalWidth, 10, 'F');
         doc.setLineWidth(0.5);
         doc.setDrawColor(0, 0, 0); // Black border
         doc.rect(totalX, totalsY, totalWidth, 10);
+        // Add vertical line to separate label from amount
+        doc.line(totalX + 45, totalsY, totalX + 45, totalsY + 10);
         doc.setTextColor(255, 255, 255); // White text
         doc.setFontSize(9);
         doc.text('SUBTOTAL', totalX + 5, totalsY + 6);
-        doc.text(`Rs ${data.subtotal.toFixed(0)}`, totalX + 55, totalsY + 6);
+        doc.text(`Rs ${data.subtotal.toFixed(0)}`, totalX + 50, totalsY + 6);
         totalsY += 10;
         
-        // Advance - connected to subtotal
+        // Advance - connected to subtotal with vertical line
         doc.setFillColor(41, 128, 185); // Blue color
         doc.rect(totalX, totalsY, totalWidth, 10, 'F');
         doc.rect(totalX, totalsY, totalWidth, 10);
+        // Add vertical line to separate label from amount
+        doc.line(totalX + 45, totalsY, totalX + 45, totalsY + 10);
         doc.setTextColor(255, 255, 255); // White text
         doc.text('Advance', totalX + 5, totalsY + 6);
-        doc.text(`Rs ${data.advance.toFixed(0)}`, totalX + 55, totalsY + 6);
+        doc.text(`Rs ${data.advance.toFixed(0)}`, totalX + 50, totalsY + 6);
         totalsY += 10;
         
-        // Total with emphasis - connected to advance
+        // Total with emphasis - connected to advance with vertical line
         doc.setFillColor(41, 128, 185); // Blue color
         doc.rect(totalX, totalsY, totalWidth, 12, 'F');
         doc.rect(totalX, totalsY, totalWidth, 12);
+        // Add vertical line to separate label from amount
+        doc.line(totalX + 45, totalsY, totalX + 45, totalsY + 12);
         doc.setTextColor(255, 255, 255); // White text
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
         doc.text('Total', totalX + 5, totalsY + 7);
-        doc.text(`Rs ${data.total.toFixed(0)}`, totalX + 55, totalsY + 7);
+        doc.text(`Rs ${data.total.toFixed(0)}`, totalX + 50, totalsY + 7);
         
         // Thank you message - positioned below totals table
         doc.setFont('helvetica', 'bold');
