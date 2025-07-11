@@ -232,8 +232,10 @@ class InvoiceGenerator {
                 const targetHeight = 25; // Increased height significantly for better visibility
                 const targetWidth = targetHeight * aspectRatio;
                 
-                // Add the logo image with proper aspect ratio
-                doc.addImage(dataURL, 'JPEG', 15, 42, targetWidth, targetHeight);
+                // Center the logo image with the company name
+                const companyNameWidth = doc.getTextWidth('SUPER SON ENTERPRISE');
+                const imageStartX = 15 + (companyNameWidth / 2) - (targetWidth / 2);
+                doc.addImage(dataURL, 'JPEG', imageStartX, 42, targetWidth, targetHeight);
                 this.completePDFGeneration(doc, data);
             } catch (error) {
                 console.error('Error converting image to base64:', error);
@@ -511,49 +513,55 @@ class InvoiceGenerator {
         // Store final items table position for connecting totals
         const itemsEndY = yPos;
 
-        // Totals table - connected directly to items table (compact)
-        const totalsStartY = itemsEndY + 5; // Start right after items
-        const totalWidth = 75;
-        const totalX = 115; // Align with right side of items table
+        // Enhanced totals table - connected directly to items table
+        const totalsStartY = itemsEndY + 5;
+        const totalWidth = 80; // Increased width for better proportions
+        const totalX = 110; // Adjusted to align better with items table
         
-        let totalsY = totalsStartY; // Start after thank you message
+        let totalsY = totalsStartY;
         
-        // SUBTOTAL - compact layout with vertical line
-        doc.setFillColor(41, 128, 185); // Blue color
-        doc.rect(totalX, totalsY, totalWidth, 10, 'F');
+        // Professional SUBTOTAL row matching invoice color scheme
+        doc.setFillColor(250, 250, 250); // Light gray background
+        doc.rect(totalX, totalsY, totalWidth, 12, 'F');
         doc.setLineWidth(0.5);
         doc.setDrawColor(0, 0, 0); // Black border
-        doc.rect(totalX, totalsY, totalWidth, 10);
-        // Add vertical line to separate label from amount
-        doc.line(totalX + 45, totalsY, totalX + 45, totalsY + 10);
-        doc.setTextColor(255, 255, 255); // White text
-        doc.setFontSize(9);
-        doc.text('SUBTOTAL', totalX + 5, totalsY + 6);
-        doc.text(`Rs ${data.subtotal.toFixed(0)}`, totalX + 50, totalsY + 6);
-        totalsY += 10;
-        
-        // Advance - connected to subtotal with vertical line
-        doc.setFillColor(41, 128, 185); // Blue color
-        doc.rect(totalX, totalsY, totalWidth, 10, 'F');
-        doc.rect(totalX, totalsY, totalWidth, 10);
-        // Add vertical line to separate label from amount
-        doc.line(totalX + 45, totalsY, totalX + 45, totalsY + 10);
-        doc.setTextColor(255, 255, 255); // White text
-        doc.text('Advance', totalX + 5, totalsY + 6);
-        doc.text(`Rs ${data.advance.toFixed(0)}`, totalX + 50, totalsY + 6);
-        totalsY += 10;
-        
-        // Total with emphasis - connected to advance with vertical line
-        doc.setFillColor(41, 128, 185); // Blue color
-        doc.rect(totalX, totalsY, totalWidth, 12, 'F');
         doc.rect(totalX, totalsY, totalWidth, 12);
-        // Add vertical line to separate label from amount
-        doc.line(totalX + 45, totalsY, totalX + 45, totalsY + 12);
+        doc.line(totalX + 50, totalsY, totalX + 50, totalsY + 12);
+        doc.setTextColor(0, 0, 0); // Black text
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text('SUBTOTAL', totalX + 3, totalsY + 8);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Rs ${data.subtotal.toFixed(0)}`, totalX + 53, totalsY + 8);
+        totalsY += 12;
+        
+        // Professional Advance row
+        doc.setFillColor(250, 250, 250); // Light gray background
+        doc.rect(totalX, totalsY, totalWidth, 12, 'F');
+        doc.setLineWidth(0.5);
+        doc.setDrawColor(0, 0, 0); // Black border
+        doc.rect(totalX, totalsY, totalWidth, 12);
+        doc.line(totalX + 50, totalsY, totalX + 50, totalsY + 12);
+        doc.setTextColor(0, 0, 0); // Black text
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Advance', totalX + 3, totalsY + 8);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Rs ${data.advance.toFixed(0)}`, totalX + 53, totalsY + 8);
+        totalsY += 12;
+        
+        // Professional Total row with blue header matching invoice theme
+        doc.setFillColor(41, 128, 185); // Blue background matching invoice headers
+        doc.rect(totalX, totalsY, totalWidth, 14, 'F');
+        doc.setLineWidth(0.5);
+        doc.setDrawColor(0, 0, 0); // Black border
+        doc.rect(totalX, totalsY, totalWidth, 14);
+        doc.line(totalX + 50, totalsY, totalX + 50, totalsY + 14);
         doc.setTextColor(255, 255, 255); // White text
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
-        doc.text('Total', totalX + 5, totalsY + 7);
-        doc.text(`Rs ${data.total.toFixed(0)}`, totalX + 50, totalsY + 7);
+        doc.text('TOTAL', totalX + 3, totalsY + 9);
+        doc.text(`Rs ${data.total.toFixed(0)}`, totalX + 53, totalsY + 9);
         
         // Thank you message - positioned below totals table
         doc.setFont('helvetica', 'bold');
