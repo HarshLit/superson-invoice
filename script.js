@@ -65,7 +65,7 @@ class InvoiceGenerator {
         const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
         const price = parseFloat(row.querySelector('.item-price').value) || 0;
         const amount = qty * price;
-        row.querySelector('.item-amount').textContent = `INR ${amount.toFixed(2)}`;
+        row.querySelector('.item-amount').textContent = `${amount.toFixed(2)}`;
         this.calculateTotal();
     }
 
@@ -302,7 +302,7 @@ class InvoiceGenerator {
         
         // Customer details section - centered content
         doc.setTextColor(0, 0, 0); // Black text
-        doc.setFontSize(9);
+        doc.setFontSize(14);
         doc.setFont('helvetica', 'bold'); // Make customer name bold
         // Center the customer name
         const billToWidth = 120;
@@ -337,14 +337,14 @@ class InvoiceGenerator {
         doc.line(rightX + halfWidth, sectionY, rightX + halfWidth, sectionY + 18);
         
         doc.setTextColor(255, 255, 255); // White text
-        doc.setFontSize(10); // Match BILL TO font size
+        doc.setFontSize(11); // Match BILL TO font size
         doc.setFont('helvetica', 'bold');
         doc.text('INVOICE #', rightX + 2, sectionY + 6);
         doc.text('DATE', rightX + halfWidth + 2, sectionY + 6);
         
         // Invoice values - centered in each half - MADE BOLD
         doc.setTextColor(0, 0, 0); // Black text
-        doc.setFontSize(9);
+        doc.setFontSize(11);
         doc.setFont('helvetica', 'bold'); // Changed from 'normal' to 'bold'
         // Center invoice number in left half
         const invoiceNumWidth = doc.getTextWidth(data.invoiceNumber);
@@ -363,7 +363,7 @@ class InvoiceGenerator {
         doc.setFillColor(41, 128, 185); // Blue color
         doc.rect(rightX, sectionY + 18, rightWidth, headerHeight, 'F');
         doc.setTextColor(255, 255, 255); // White text
-        doc.setFontSize(10); // Match BILL TO, INVOICE #, and DATE font size
+        doc.setFontSize(11); // Match BILL TO, INVOICE #, and DATE font size
         doc.setFont('helvetica', 'bold');
         // Center the header text
         const headerText = 'Total Amount To Pay';
@@ -373,9 +373,9 @@ class InvoiceGenerator {
         
         // Total amount value (bottom part) - centered content
         doc.setTextColor(0, 0, 0); // Black text
-        doc.setFontSize(9); // Consistent with other content
+        doc.setFontSize(14); // Consistent with other content
         doc.setFont('helvetica', 'bold');
-        const totalText = `INR ${data.total.toFixed(2)}`;
+        const totalText = `${data.total.toFixed(2)}`;
         const totalTextWidth = doc.getTextWidth(totalText);
         const totalCenterX = rightX + (rightWidth / 2) - (totalTextWidth / 2);
         doc.text(totalText, totalCenterX, sectionY + 32);
@@ -404,7 +404,7 @@ class InvoiceGenerator {
         
         // Table headers text in white - adjusted positioning for smaller height
         doc.setTextColor(255, 255, 255); // White text
-        doc.setFontSize(8); // Reduced font size
+        doc.setFontSize(12); // Reduced font size
         doc.text('SR', 17, yPos - 1);
         doc.text('NO', 17, yPos + 2);
         doc.text('DESCRIPTION', 50, yPos + 1);
@@ -434,7 +434,7 @@ class InvoiceGenerator {
             const maxDescriptionWidth = colWidths[1] - 4;
             
             // Calculate how many lines the description needs
-            doc.setFontSize(8);
+            doc.setFontSize(12);
             const descriptionLines = doc.splitTextToSize(description, maxDescriptionWidth);
             
             if (items.length === 1) {
@@ -449,7 +449,7 @@ class InvoiceGenerator {
                 
                 // Position text content - properly centered vertically
                 const cellCenterY = yPos - 5 + (requiredHeight / 2);
-                doc.setFontSize(8);
+                doc.setFontSize(12);
                 doc.text(currentSrNo.toString(), 17, cellCenterY);
                 
                 // Handle multi-line description
@@ -466,7 +466,7 @@ class InvoiceGenerator {
                 doc.text(item.size, 92, cellCenterY);
                 doc.text(item.qty.toString(), 117, cellCenterY);
                 doc.text(item.price.toFixed(0), 137, cellCenterY);
-                doc.text(`INR ${item.amount.toFixed(0)}`, 160, cellCenterY);
+                doc.text(`${item.amount.toFixed(0)}`, 160, cellCenterY);
                 yPos += requiredHeight;
                 currentSrNo++;
             } else {
@@ -490,7 +490,7 @@ class InvoiceGenerator {
                 
                 // Position description (first two columns content) - centered vertically
                 const groupCenterY = yPos - 5 + (groupRequiredHeight / 2);
-                doc.setFontSize(8);
+                doc.setFontSize(12);
                 doc.text(currentSrNo.toString(), 17, groupCenterY);
                 
                 // Handle multi-line description in center
@@ -510,7 +510,7 @@ class InvoiceGenerator {
                     doc.text(item.size, 92, rowCenterY);
                     doc.text(item.qty.toString(), 117, rowCenterY);
                     doc.text(item.price.toFixed(0), 137, rowCenterY);
-                    doc.text(`INR ${item.amount.toFixed(0)}`, 160, rowCenterY);
+                    doc.text(`${item.amount.toFixed(0)}`, 160, rowCenterY);
                 });
                 
                 yPos += groupRequiredHeight;
@@ -542,11 +542,11 @@ class InvoiceGenerator {
         doc.line(totalX + 25, totalsY, totalX + 25, totalsY + 12);
         // Text
         doc.setTextColor(255, 255, 255); // White text for blue column
-        doc.setFontSize(9);
+        doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
         doc.text('SUBTOTAL', totalX + 3, totalsY + 8);
         doc.setTextColor(0, 0, 0); // Black text for white column
-        doc.text(`INR ${data.subtotal.toFixed(0)}`, totalX + 28, totalsY + 8);
+        doc.text(`${data.subtotal.toFixed(0)}`, totalX + 28, totalsY + 8);
         totalsY += 12;
         
         // Advance row with blue left column and white right column
@@ -563,11 +563,11 @@ class InvoiceGenerator {
         doc.line(totalX + 25, totalsY, totalX + 25, totalsY + 12);
         // Text
         doc.setTextColor(255, 255, 255); // White text for blue column
-        doc.setFontSize(9);
+        doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.text('Advance', totalX + 3, totalsY + 8);
         doc.setTextColor(0, 0, 0); // Black text for white column
-        doc.text(`INR ${data.advance.toFixed(0)}`, totalX + 28, totalsY + 8);
+        doc.text(`${data.advance.toFixed(0)}`, totalX + 28, totalsY + 8);
         totalsY += 12;
         
         // Total row with blue left column and white right column
@@ -584,15 +584,15 @@ class InvoiceGenerator {
         doc.line(totalX + 25, totalsY, totalX + 25, totalsY + 14);
         // Text
         doc.setTextColor(255, 255, 255); // White text for blue column
-        doc.setFontSize(10);
+        doc.setFontSize(13);
         doc.setFont('helvetica', 'bold');
         doc.text('TOTAL', totalX + 3, totalsY + 9);
         doc.setTextColor(0, 0, 0); // Black text for white column
-        doc.text(`INR ${data.total.toFixed(0)}`, totalX + 28, totalsY + 9);
+        doc.text(`${data.total.toFixed(0)}`, totalX + 28, totalsY + 9);
         
         // Thank you message - positioned below totals table
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
+        doc.setFontSize(13);
         doc.setTextColor(41, 128, 185); // Blue color
         doc.text('Thank you for your business!', 105, totalsY + 20, { align: 'center' });
         
