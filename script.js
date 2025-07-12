@@ -625,8 +625,11 @@ class InvoiceGenerator {
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(0, 0, 0);
             
-            // OLD DUE in SR NO column
-            doc.text('OLD DUE', 15, cellCenterY);
+            // OLD DUE in SR NO column - smaller font to fit better
+            doc.setFontSize(10);
+            doc.text('OLD', 15, cellCenterY - 1);
+            doc.text('DUE', 15, cellCenterY + 2);
+            doc.setFontSize(14); // Reset font size
             
             // Format description with bold bill number and date
             let description = '';
@@ -745,16 +748,16 @@ class InvoiceGenerator {
         doc.text('Thank you for your business!', 105, totalsY + 20, { align: 'center' });
         
         // Update yPos for footer
-        yPos = totalsY + 25;
+        yPos = totalsY + 15; // Reduced from 25 to 15
 
         // Footer section with subtle styling - more compact
-        yPos += 10;
+        yPos += 5; // Reduced from 10 to 5
         
         // Add a separator line above footer
         doc.setLineWidth(0.5);
         doc.setDrawColor(150, 150, 150);
         doc.line(20, yPos, 190, yPos);
-        yPos += 10;
+        yPos += 5; // Reduced from 10 to 5
         
         // Add signature image above "Authorized" text
         const signImg = new Image();
@@ -768,8 +771,8 @@ class InvoiceGenerator {
                 signCtx.drawImage(signImg, 0, 0);
                 const signDataURL = signCanvas.toDataURL('image/png', 0.9);
                 
-                // Add signature image (positioned above "Authorized")
-                doc.addImage(signDataURL, 'PNG', 20, yPos - 25, 40, 20); // x, y, width, height
+                // Add signature image (positioned above "Authorized") - smaller and closer
+                doc.addImage(signDataURL, 'PNG', 20, yPos - 15, 30, 12); // x, y, width, height - reduced size
                 
                 // Add "Authorized" text below the signature
                 doc.setTextColor(0, 0, 0); // Black text
@@ -777,13 +780,13 @@ class InvoiceGenerator {
                 doc.setFontSize(10);
                 doc.text('Authorized', 20, yPos);
                 
-                // Add contact information
-                yPos += 15;
+                // Add contact information - more compact
+                yPos += 8; // Reduced from 15 to 8
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(9);
                 doc.setTextColor(80, 80, 80); // Slightly gray text
                 doc.text('If you have any questions about this invoice, please contact', 20, yPos);
-                yPos += 5;
+                yPos += 4; // Reduced from 5 to 4
                 doc.setTextColor(41, 128, 185); // Blue color for contact info
                 doc.text('[Mob: 9413121066, email: satyendratie@gmail.com]', 20, yPos);
                 
@@ -802,13 +805,13 @@ class InvoiceGenerator {
                 doc.setFontSize(10);
                 doc.text('Authorized', 20, yPos);
                 
-                // Add contact information
-                yPos += 15;
+                // Add contact information - more compact
+                yPos += 8; // Reduced from 15 to 8
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(9);
                 doc.setTextColor(80, 80, 80); // Slightly gray text
                 doc.text('If you have any questions about this invoice, please contact', 20, yPos);
-                yPos += 5;
+                yPos += 4; // Reduced from 5 to 4
                 doc.setTextColor(41, 128, 185); // Blue color for contact info
                 doc.text('[Mob: 9413121066, email: satyendratie@gmail.com]', 20, yPos);
                 
