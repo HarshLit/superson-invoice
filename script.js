@@ -15,11 +15,27 @@ class InvoiceGenerator {
         document.getElementById('loadInvoice').addEventListener('click', () => this.loadInvoice());
         document.getElementById('clearForm').addEventListener('click', () => this.clearForm());
         document.getElementById('advance').addEventListener('input', () => this.calculateTotal());
+        document.getElementById('addOldDue').addEventListener('change', () => this.toggleOldDueFields());
+        document.getElementById('oldDueAmount').addEventListener('input', () => this.calculateTotal());
     }
 
     setDefaultDate() {
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('invoiceDate').value = today;
+    }
+
+    toggleOldDueFields() {
+        const checkbox = document.getElementById('addOldDue');
+        const fields = document.getElementById('oldDueFields');
+        fields.style.display = checkbox.checked ? 'block' : 'none';
+        
+        if (!checkbox.checked) {
+            // Clear old due fields when unchecked
+            document.getElementById('oldBillNumber').value = '';
+            document.getElementById('oldBillDate').value = '';
+            document.getElementById('oldDueAmount').value = '';
+            this.calculateTotal();
+        }
     }
 
     addItem() {
@@ -28,7 +44,7 @@ class InvoiceGenerator {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${this.itemCount}</td>
-            <td><input type="text" class="item-description" placeholder="Description" required></td>
+            <td><textarea class="item-description" placeholder="Description (Shift+Enter for line break)" required rows="1"></textarea></td>
             <td><input type="text" class="item-size" placeholder="Size"></td>
             <td><input type="number" class="item-qty" placeholder="Qty" min="1" required></td>
             <td><input type="number" class="item-price" placeholder="Price" step="0.01" min="0" required></td>
@@ -38,13 +54,30 @@ class InvoiceGenerator {
         tableBody.appendChild(row);
 
         // Add event listeners for calculations
+        const descriptionTextarea = row.querySelector('.item-description');
         const qtyInput = row.querySelector('.item-qty');
         const priceInput = row.querySelector('.item-price');
         const removeBtn = row.querySelector('.remove-item');
 
+        // Auto-resize textarea and handle line breaks
+        descriptionTextarea.addEventListener('input', () => this.autoResizeTextarea(descriptionTextarea));
+        descriptionTextarea.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault(); // Prevent regular Enter from adding line break
+                // Move to next field or add new item
+                const sizeInput = row.querySelector('.item-size');
+                sizeInput.focus();
+            }
+        });
+
         qtyInput.addEventListener('input', () => this.calculateItemAmount(row));
         priceInput.addEventListener('input', () => this.calculateItemAmount(row));
         removeBtn.addEventListener('click', () => this.removeItem(row));
+    }
+
+    autoResizeTextarea(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
     }
 
     removeItem(row) {
@@ -76,6 +109,10 @@ class InvoiceGenerator {
             const value = parseFloat(amount.textContent.replace('INR ', '')) || 0;
             subtotal += value;
         });
+        
+        // Add old due amount if present
+        const oldDueAmount = parseFloat(document.getElementById('oldDueAmount').value) || 0;
+        subtotal += oldDueAmount;
         
         const advance = parseFloat(document.getElementById('advance').value) || 0;
         const total = subtotal - advance;
@@ -115,7 +152,13 @@ class InvoiceGenerator {
             items: items,
             subtotal: parseFloat(document.getElementById('subtotal').value) || 0,
             advance: parseFloat(document.getElementById('advance').value) || 0,
-            total: parseFloat(document.getElementById('total').value) || 0
+            total: parseFloat(document.getElementById('total').value) || 0,
+            oldDue: {
+                hasOldDue: document.getElementById('addOldDue').checked,
+                billNumber: document.getElementById('oldBillNumber').value,
+                date: document.getElementById('oldBillDate').value,
+                amount: parseFloat(document.getElementById('oldDueAmount').value) || 0
+            }
         };
     }
 
@@ -163,7 +206,9 @@ class InvoiceGenerator {
         data.items.forEach(item => {
             this.addItem();
             const row = document.querySelector('#itemsTableBody tr:last-child');
-            row.querySelector('.item-description').value = item.description;
+            const descriptionTextarea = row.querySelector('.item-description');
+            descriptionTextarea.value = item.description;
+            this.autoResizeTextarea(descriptionTextarea); // Resize after setting value
             row.querySelector('.item-size').value = item.size;
             row.querySelector('.item-qty').value = item.qty;
             row.querySelector('.item-price').value = item.price;
@@ -390,8 +435,8 @@ class InvoiceGenerator {
         doc.setFont('helvetica', 'bold');
         
         // Define column widths and positions - aligned with sections above
-        const colWidths = [15, 67, 20, 20, 25, 30]; // Balanced description and amount widths
-        const colPositions = [13, 28, 95, 115, 135, 160];
+        const colWidths = [10, 85, 16, 16, 20, 30]; // Much wider description, smaller others
+        const colPositions = [13, 23, 108, 124, 140, 160];
         
         // Draw individual header cells with blue background and borders - reduced height
         const headerRowHeight = 12; // Reduced from 15 to 12
@@ -406,12 +451,12 @@ class InvoiceGenerator {
         // Table headers text in white - adjusted positioning for smaller height
         doc.setTextColor(255, 255, 255); // White text
         doc.setFontSize(12); // Reduced font size
-        doc.text('SR', 17, yPos - 1);
-        doc.text('NO', 17, yPos + 2);
-        doc.text('DESCRIPTION', 50, yPos + 1);
-        doc.text('Size', 100, yPos + 1);
-        doc.text('QTY', 122, yPos + 1);
-        doc.text('PRICE', 142, yPos + 1);
+        doc.text('SR', 15, yPos - 1);
+        doc.text('NO', 15, yPos + 2);
+        doc.text('DESCRIPTION', 60, yPos + 1);
+        doc.text('Size', 113, yPos + 1);
+        doc.text('QTY', 129, yPos + 1);
+        doc.text('PRICE', 145, yPos + 1);
         doc.text('AMOUNT', 170, yPos + 1);
         
         yPos += headerRowHeight;
@@ -431,17 +476,27 @@ class InvoiceGenerator {
         let currentSrNo = 1;
         Object.keys(groupedItems).forEach(description => {
             const items = groupedItems[description];
-            const baseItemHeight = 8;
+            const baseItemHeight = 6;
             const maxDescriptionWidth = colWidths[1] - 4;
             
             // Calculate how many lines the description needs
             doc.setFontSize(14);
-            const descriptionLines = doc.splitTextToSize(description, maxDescriptionWidth);
+            // Split by manual line breaks first, then by width
+            const manualLines = description.split('\n');
+            let descriptionLines = [];
+            manualLines.forEach(line => {
+                if (line.trim() === '') {
+                    descriptionLines.push(''); // Preserve empty lines
+                } else {
+                    const wrappedLines = doc.splitTextToSize(line, maxDescriptionWidth);
+                    descriptionLines = descriptionLines.concat(wrappedLines);
+                }
+            });
             
             if (items.length === 1) {
                 // Single item - display normally
                 const item = items[0];
-                const requiredHeight = Math.max(baseItemHeight, descriptionLines.length * 3 + 3);
+                const requiredHeight = Math.max(baseItemHeight, descriptionLines.length * 5 + 6);
                 
                 // Draw individual cells for the item
                 colPositions.forEach((pos, colIndex) => {
@@ -451,17 +506,17 @@ class InvoiceGenerator {
                 // Position text content - properly centered vertically
                 const cellCenterY = yPos - 5 + (requiredHeight / 2) + 2;
                 doc.setFontSize(14);
-                doc.text(currentSrNo.toString(), 17, cellCenterY);
+                doc.text(currentSrNo.toString(), 15, cellCenterY);
                 
                 // Handle multi-line description
                 if (descriptionLines.length > 1) {
-                    const totalDescHeight = descriptionLines.length * 3;
-                    const descStartY = cellCenterY - (totalDescHeight / 2) + 1;
+                    const totalDescHeight = descriptionLines.length * 5;
+                    const descStartY = cellCenterY - (totalDescHeight / 2) + 2;
                     descriptionLines.forEach((line, lineIndex) => {
-                        doc.text(line, 30, descStartY + (lineIndex * 3));
+                        doc.text(line, 25, descStartY + (lineIndex * 5));
                     });
                 } else {
-                    doc.text(description, 30, cellCenterY);
+                    doc.text(description, 25, cellCenterY);
                 }
                 
                 // Center text horizontally in each column
@@ -488,7 +543,7 @@ class InvoiceGenerator {
             } else {
                 // Multiple items with same description - group them
                 const itemRowHeight = 8; // Height for each size/qty/price/amount row
-                const groupRequiredHeight = Math.max(items.length * itemRowHeight, descriptionLines.length * 3 + 6);
+                const groupRequiredHeight = Math.max(items.length * itemRowHeight, descriptionLines.length * 5 + 8);
                 
                 // Draw cells for the entire group
                 colPositions.forEach((pos, colIndex) => {
@@ -507,17 +562,17 @@ class InvoiceGenerator {
                 // Position description (first two columns content) - centered vertically
                 const groupCenterY = yPos - 5 + (groupRequiredHeight / 2) + 2;
                 doc.setFontSize(14);
-                doc.text(currentSrNo.toString(), 17, groupCenterY);
+                doc.text(currentSrNo.toString(), 15, groupCenterY);
                 
                 // Handle multi-line description in center
                 if (descriptionLines.length > 1) {
-                    const totalDescHeight = descriptionLines.length * 3;
-                    const descStartY = groupCenterY - (totalDescHeight / 2) + 1;
+                    const totalDescHeight = descriptionLines.length * 5;
+                    const descStartY = groupCenterY - (totalDescHeight / 2) + 2;
                     descriptionLines.forEach((line, lineIndex) => {
-                        doc.text(line, 30, descStartY + (lineIndex * 3));
+                        doc.text(line, 25, descStartY + (lineIndex * 5));
                     });
                 } else {
-                    doc.text(description, 30, groupCenterY);
+                    doc.text(description, 25, groupCenterY);
                 }
                 
                 // Display multiple sizes, quantities, prices and amounts - each row vertically centered
@@ -549,6 +604,66 @@ class InvoiceGenerator {
                 currentSrNo++;
             }
         });
+        
+        // Add old due row if present
+        if (data.oldDue.hasOldDue && data.oldDue.amount > 0) {
+            const oldDueHeight = 10;
+            
+            // Draw grey background for old due row
+            doc.setFillColor(220, 220, 220); // Light grey background
+            doc.rect(13, yPos - 5, 177, oldDueHeight, 'F');
+            
+            // Draw individual cells with borders
+            colPositions.forEach((pos, index) => {
+                doc.setLineWidth(0.5);
+                doc.setDrawColor(0, 0, 0);
+                doc.rect(pos, yPos - 5, colWidths[index], oldDueHeight);
+            });
+            
+            const cellCenterY = yPos - 5 + (oldDueHeight / 2) + 2;
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 0, 0);
+            
+            // OLD DUE in SR NO column
+            doc.text('OLD DUE', 15, cellCenterY);
+            
+            // Format description with bold bill number and date
+            let description = '';
+            if (data.oldDue.billNumber) {
+                description += `Bill No.: ${data.oldDue.billNumber}`;
+            }
+            if (data.oldDue.date) {
+                const formattedOldDate = new Date(data.oldDue.date).toLocaleDateString('en-GB');
+                if (description) description += ` dated: ${formattedOldDate}`;
+                else description = `Dated: ${formattedOldDate}`;
+            }
+            if (!description) description = 'Previous Due';
+            
+            doc.text(description, 25, cellCenterY);
+            
+            // Empty cells for Size, QTY, Price (centered dashes)
+            doc.setFont('helvetica', 'normal');
+            const sizeWidth = doc.getTextWidth('-');
+            const sizeCenterX = colPositions[2] + (colWidths[2] / 2) - (sizeWidth / 2);
+            doc.text('-', sizeCenterX, cellCenterY);
+            
+            const qtyWidth = doc.getTextWidth('-');
+            const qtyCenterX = colPositions[3] + (colWidths[3] / 2) - (qtyWidth / 2);
+            doc.text('-', qtyCenterX, cellCenterY);
+            
+            const priceWidth = doc.getTextWidth('-');
+            const priceCenterX = colPositions[4] + (colWidths[4] / 2) - (priceWidth / 2);
+            doc.text('-', priceCenterX, cellCenterY);
+            
+            // Amount (right-aligned, bold)
+            doc.setFont('helvetica', 'bold');
+            const amountText = `${data.oldDue.amount.toFixed(0)}`;
+            const amountRightX = colPositions[5] + colWidths[5] - 3;
+            doc.text(amountText, amountRightX, cellCenterY, { align: 'right' });
+            
+            yPos += oldDueHeight;
+        }
         
         // Store final items table position for connecting totals
         const itemsEndY = yPos;
