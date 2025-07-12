@@ -32,7 +32,7 @@ class InvoiceGenerator {
             <td><input type="text" class="item-size" placeholder="Size"></td>
             <td><input type="number" class="item-qty" placeholder="Qty" min="1" required></td>
             <td><input type="number" class="item-price" placeholder="Price" step="0.01" min="0" required></td>
-            <td class="item-amount">Rs 0</td>
+            <td class="item-amount">INR 0</td>
             <td><button type="button" class="btn btn-danger remove-item">Remove</button></td>
         `;
         tableBody.appendChild(row);
@@ -65,7 +65,7 @@ class InvoiceGenerator {
         const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
         const price = parseFloat(row.querySelector('.item-price').value) || 0;
         const amount = qty * price;
-        row.querySelector('.item-amount').textContent = `Rs ${amount.toFixed(2)}`;
+        row.querySelector('.item-amount').textContent = `INR ${amount.toFixed(2)}`;
         this.calculateTotal();
     }
 
@@ -73,7 +73,7 @@ class InvoiceGenerator {
         const amounts = document.querySelectorAll('.item-amount');
         let subtotal = 0;
         amounts.forEach(amount => {
-            const value = parseFloat(amount.textContent.replace('Rs ', '')) || 0;
+            const value = parseFloat(amount.textContent.replace('INR ', '')) || 0;
             subtotal += value;
         });
         
@@ -93,7 +93,7 @@ class InvoiceGenerator {
             const size = row.querySelector('.item-size').value;
             const qty = row.querySelector('.item-qty').value;
             const price = row.querySelector('.item-price').value;
-            const amount = row.querySelector('.item-amount').textContent.replace('Rs ', '');
+            const amount = row.querySelector('.item-amount').textContent.replace('INR ', '');
             
             if (description && qty && price) {
                 items.push({
@@ -188,6 +188,14 @@ class InvoiceGenerator {
 
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
+        
+        // Try to set a font that supports ₹ symbol
+        try {
+            doc.setFont('Arial', 'normal');
+        } catch (e) {
+            // Fallback to default if Arial is not available
+            console.log('Arial font not available, using default');
+        }
 
         // Add page border with slight shadow effect
         doc.setLineWidth(1);
@@ -334,10 +342,10 @@ class InvoiceGenerator {
         doc.text('INVOICE #', rightX + 2, sectionY + 6);
         doc.text('DATE', rightX + halfWidth + 2, sectionY + 6);
         
-        // Invoice values - centered in each half
+        // Invoice values - centered in each half - MADE BOLD
         doc.setTextColor(0, 0, 0); // Black text
         doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
+        doc.setFont('helvetica', 'bold'); // Changed from 'normal' to 'bold'
         // Center invoice number in left half
         const invoiceNumWidth = doc.getTextWidth(data.invoiceNumber);
         const invoiceNumCenterX = rightX + (halfWidth / 2) - (invoiceNumWidth / 2);
@@ -355,7 +363,7 @@ class InvoiceGenerator {
         doc.setFillColor(41, 128, 185); // Blue color
         doc.rect(rightX, sectionY + 18, rightWidth, headerHeight, 'F');
         doc.setTextColor(255, 255, 255); // White text
-        doc.setFontSize(8); // Fit in the space
+        doc.setFontSize(10); // Match BILL TO, INVOICE #, and DATE font size
         doc.setFont('helvetica', 'bold');
         // Center the header text
         const headerText = 'Total Amount To Pay';
@@ -367,7 +375,7 @@ class InvoiceGenerator {
         doc.setTextColor(0, 0, 0); // Black text
         doc.setFontSize(9); // Consistent with other content
         doc.setFont('helvetica', 'bold');
-        const totalText = `Rs ${data.total.toFixed(2)}`;
+        const totalText = `INR ${data.total.toFixed(2)}`;
         const totalTextWidth = doc.getTextWidth(totalText);
         const totalCenterX = rightX + (rightWidth / 2) - (totalTextWidth / 2);
         doc.text(totalText, totalCenterX, sectionY + 32);
@@ -458,7 +466,7 @@ class InvoiceGenerator {
                 doc.text(item.size, 92, cellCenterY);
                 doc.text(item.qty.toString(), 117, cellCenterY);
                 doc.text(item.price.toFixed(0), 137, cellCenterY);
-                doc.text(`Rs ${item.amount.toFixed(0)}`, 160, cellCenterY);
+                doc.text(`INR ${item.amount.toFixed(0)}`, 160, cellCenterY);
                 yPos += requiredHeight;
                 currentSrNo++;
             } else {
@@ -502,7 +510,7 @@ class InvoiceGenerator {
                     doc.text(item.size, 92, rowCenterY);
                     doc.text(item.qty.toString(), 117, rowCenterY);
                     doc.text(item.price.toFixed(0), 137, rowCenterY);
-                    doc.text(`Rs ${item.amount.toFixed(0)}`, 160, rowCenterY);
+                    doc.text(`INR ${item.amount.toFixed(0)}`, 160, rowCenterY);
                 });
                 
                 yPos += groupRequiredHeight;
@@ -538,7 +546,7 @@ class InvoiceGenerator {
         doc.setFont('helvetica', 'bold');
         doc.text('SUBTOTAL', totalX + 3, totalsY + 8);
         doc.setTextColor(0, 0, 0); // Black text for white column
-        doc.text(`\u20B9 ${data.subtotal.toFixed(0)}`, totalX + 28, totalsY + 8);
+        doc.text(`INR ${data.subtotal.toFixed(0)}`, totalX + 28, totalsY + 8);
         totalsY += 12;
         
         // Advance row with blue left column and white right column
@@ -559,7 +567,7 @@ class InvoiceGenerator {
         doc.setFont('helvetica', 'bold');
         doc.text('Advance', totalX + 3, totalsY + 8);
         doc.setTextColor(0, 0, 0); // Black text for white column
-        doc.text(`\u20B9 ${data.advance.toFixed(0)}`, totalX + 28, totalsY + 8);
+        doc.text(`INR ${data.advance.toFixed(0)}`, totalX + 28, totalsY + 8);
         totalsY += 12;
         
         // Total row with blue left column and white right column
@@ -580,7 +588,7 @@ class InvoiceGenerator {
         doc.setFont('helvetica', 'bold');
         doc.text('TOTAL', totalX + 3, totalsY + 9);
         doc.setTextColor(0, 0, 0); // Black text for white column
-        doc.text(`\u20B9 ${data.total.toFixed(0)}`, totalX + 28, totalsY + 9);
+        doc.text(`INR ${data.total.toFixed(0)}`, totalX + 28, totalsY + 9);
         
         // Thank you message - positioned below totals table
         doc.setFont('helvetica', 'bold');
@@ -600,21 +608,97 @@ class InvoiceGenerator {
         doc.line(20, yPos, 190, yPos);
         yPos += 10;
         
-        doc.setTextColor(0, 0, 0); // Black text
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.text('Authorized', 20, yPos);
+        // Add signature image above "Authorized" text
+        const signImg = new Image();
+        signImg.onload = function() {
+            try {
+                // Convert signature image to base64
+                const signCanvas = document.createElement('canvas');
+                const signCtx = signCanvas.getContext('2d');
+                signCanvas.width = signImg.width;
+                signCanvas.height = signImg.height;
+                signCtx.drawImage(signImg, 0, 0);
+                const signDataURL = signCanvas.toDataURL('image/png', 0.9);
+                
+                // Add signature image (positioned above "Authorized")
+                doc.addImage(signDataURL, 'PNG', 20, yPos - 25, 40, 20); // x, y, width, height
+                
+                // Add "Authorized" text below the signature
+                doc.setTextColor(0, 0, 0); // Black text
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(10);
+                doc.text('Authorized', 20, yPos);
+                
+                // Add contact information
+                yPos += 15;
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.setTextColor(80, 80, 80); // Slightly gray text
+                doc.text('If you have any questions about this invoice, please contact', 20, yPos);
+                yPos += 5;
+                doc.setTextColor(41, 128, 185); // Blue color for contact info
+                doc.text('[Mob: 9413121066, email: satyendratie@gmail.com]', 20, yPos);
+                
+                // Generate filename with Invoice_Number Customer_Name, Address pattern
+                const cleanCustomerName = data.customerName.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+                const firstAddressLine = data.customerAddress.split('\n')[0].replace(/[^a-zA-Z0-9\s]/g, '').trim();
+                const filename = `${data.invoiceNumber} ${cleanCustomerName}, ${firstAddressLine}.pdf`;
+                
+                // Complete the PDF save
+                doc.save(filename);
+            } catch (error) {
+                console.error('Error loading signature:', error);
+                // Continue without signature
+                doc.setTextColor(0, 0, 0); // Black text
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(10);
+                doc.text('Authorized', 20, yPos);
+                
+                // Add contact information
+                yPos += 15;
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.setTextColor(80, 80, 80); // Slightly gray text
+                doc.text('If you have any questions about this invoice, please contact', 20, yPos);
+                yPos += 5;
+                doc.setTextColor(41, 128, 185); // Blue color for contact info
+                doc.text('[Mob: 9413121066, email: satyendratie@gmail.com]', 20, yPos);
+                
+                // Generate filename with Invoice_Number Customer_Name, Address pattern
+                const cleanCustomerName = data.customerName.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+                const firstAddressLine = data.customerAddress.split('\n')[0].replace(/[^a-zA-Z0-9\s]/g, '').trim();
+                const filename = `${data.invoiceNumber} ${cleanCustomerName}, ${firstAddressLine}.pdf`;
+                
+                doc.save(filename);
+            }
+        };
+        signImg.onerror = function() {
+            // Continue without signature if image fails to load
+            doc.setTextColor(0, 0, 0); // Black text
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.text('Authorized', 20, yPos);
+            
+            // Add contact information
+            yPos += 15;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(80, 80, 80); // Slightly gray text
+            doc.text('If you have any questions about this invoice, please contact', 20, yPos);
+            yPos += 5;
+            doc.setTextColor(41, 128, 185); // Blue color for contact info
+            doc.text('[Mob: 9413121066, email: satyendratie@gmail.com]', 20, yPos);
+            
+            // Generate filename with Invoice_Number Customer_Name, Address pattern
+            const cleanCustomerName = data.customerName.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+            const firstAddressLine = data.customerAddress.split('\n')[0].replace(/[^a-zA-Z0-9\s]/g, '').trim();
+            const filename = `${data.invoiceNumber} ${cleanCustomerName}, ${firstAddressLine}.pdf`;
+            
+            doc.save(filename);
+        };
+        signImg.src = 'sign.png';
         
-        yPos += 15;
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(80, 80, 80); // Slightly gray text
-        doc.text('If you have any questions about this invoice, please contact', 20, yPos);
-        yPos += 5;
-        doc.setTextColor(41, 128, 185); // Blue color for contact info
-        doc.text('[Mob: 9413121066, email: satyendratie@gmail.com]', 20, yPos);
-
-        doc.save(`Invoice_${data.invoiceNumber}.pdf`);
+        // Note: Contact info and PDF save are now handled in the signature loading callback above
     }
 
     loadInvoicesFromStorage() {
