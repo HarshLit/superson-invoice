@@ -351,10 +351,11 @@ class InvoiceGenerator {
         const invoiceNumCenterX = rightX + (halfWidth / 2) - (invoiceNumWidth / 2);
         doc.text(data.invoiceNumber, invoiceNumCenterX, sectionY + 14);
         
-        // Center date in right half
-        const dateWidth = doc.getTextWidth(data.invoiceDate);
+        // Center date in right half - format as DD-MM-YYYY
+        const formattedDate = new Date(data.invoiceDate).toLocaleDateString('en-GB');
+        const dateWidth = doc.getTextWidth(formattedDate);
         const dateCenterX = rightX + halfWidth + (halfWidth / 2) - (dateWidth / 2);
-        doc.text(data.invoiceDate, dateCenterX, sectionY + 14);
+        doc.text(formattedDate, dateCenterX, sectionY + 14);
         
         // Horizontal line to separate sections - moved up
         doc.line(rightX, sectionY + 18, rightX + rightWidth, sectionY + 18);
@@ -389,8 +390,8 @@ class InvoiceGenerator {
         doc.setFont('helvetica', 'bold');
         
         // Define column widths and positions - aligned with sections above
-        const colWidths = [15, 62, 20, 20, 25, 35]; // Increased description width to match total
-        const colPositions = [13, 28, 90, 110, 130, 155];
+        const colWidths = [15, 67, 20, 20, 25, 30]; // Balanced description and amount widths
+        const colPositions = [13, 28, 95, 115, 135, 160];
         
         // Draw individual header cells with blue background and borders - reduced height
         const headerRowHeight = 12; // Reduced from 15 to 12
@@ -408,10 +409,10 @@ class InvoiceGenerator {
         doc.text('SR', 17, yPos - 1);
         doc.text('NO', 17, yPos + 2);
         doc.text('DESCRIPTION', 50, yPos + 1);
-        doc.text('Size', 95, yPos + 1);
-        doc.text('QTY', 117, yPos + 1);
-        doc.text('PRICE', 137, yPos + 1);
-        doc.text('AMOUNT', 164, yPos + 1);
+        doc.text('Size', 100, yPos + 1);
+        doc.text('QTY', 122, yPos + 1);
+        doc.text('PRICE', 142, yPos + 1);
+        doc.text('AMOUNT', 170, yPos + 1);
         
         yPos += headerRowHeight;
         doc.setFont('helvetica', 'normal');
@@ -434,7 +435,7 @@ class InvoiceGenerator {
             const maxDescriptionWidth = colWidths[1] - 4;
             
             // Calculate how many lines the description needs
-            doc.setFontSize(12);
+            doc.setFontSize(14);
             const descriptionLines = doc.splitTextToSize(description, maxDescriptionWidth);
             
             if (items.length === 1) {
@@ -448,8 +449,8 @@ class InvoiceGenerator {
                 });
                 
                 // Position text content - properly centered vertically
-                const cellCenterY = yPos - 5 + (requiredHeight / 2);
-                doc.setFontSize(12);
+                const cellCenterY = yPos - 5 + (requiredHeight / 2) + 2;
+                doc.setFontSize(14);
                 doc.text(currentSrNo.toString(), 17, cellCenterY);
                 
                 // Handle multi-line description
@@ -463,10 +464,25 @@ class InvoiceGenerator {
                     doc.text(description, 30, cellCenterY);
                 }
                 
-                doc.text(item.size, 92, cellCenterY);
-                doc.text(item.qty.toString(), 117, cellCenterY);
-                doc.text(item.price.toFixed(0), 137, cellCenterY);
-                doc.text(`${item.amount.toFixed(0)}`, 160, cellCenterY);
+                // Center text horizontally in each column
+                const sizeText = item.size;
+                const sizeWidth = doc.getTextWidth(sizeText);
+                const sizeCenterX = colPositions[2] + (colWidths[2] / 2) - (sizeWidth / 2);
+                doc.text(sizeText, sizeCenterX, cellCenterY);
+                
+                const qtyText = item.qty.toString();
+                const qtyWidth = doc.getTextWidth(qtyText);
+                const qtyCenterX = colPositions[3] + (colWidths[3] / 2) - (qtyWidth / 2);
+                doc.text(qtyText, qtyCenterX, cellCenterY);
+                
+                const priceText = item.price.toFixed(0);
+                const priceWidth = doc.getTextWidth(priceText);
+                const priceCenterX = colPositions[4] + (colWidths[4] / 2) - (priceWidth / 2);
+                doc.text(priceText, priceCenterX, cellCenterY);
+                
+                const amountText = `${item.amount.toFixed(0)}`;
+                const amountRightX = colPositions[5] + colWidths[5] - 3; // Right align with 3pt margin
+                doc.text(amountText, amountRightX, cellCenterY, { align: 'right' });
                 yPos += requiredHeight;
                 currentSrNo++;
             } else {
@@ -489,8 +505,8 @@ class InvoiceGenerator {
                 }
                 
                 // Position description (first two columns content) - centered vertically
-                const groupCenterY = yPos - 5 + (groupRequiredHeight / 2);
-                doc.setFontSize(12);
+                const groupCenterY = yPos - 5 + (groupRequiredHeight / 2) + 2;
+                doc.setFontSize(14);
                 doc.text(currentSrNo.toString(), 17, groupCenterY);
                 
                 // Handle multi-line description in center
@@ -506,11 +522,27 @@ class InvoiceGenerator {
                 
                 // Display multiple sizes, quantities, prices and amounts - each row vertically centered
                 items.forEach((item, itemIndex) => {
-                    const rowCenterY = yPos - 5 + (itemIndex * itemRowHeight) + (itemRowHeight / 2);
-                    doc.text(item.size, 92, rowCenterY);
-                    doc.text(item.qty.toString(), 117, rowCenterY);
-                    doc.text(item.price.toFixed(0), 137, rowCenterY);
-                    doc.text(`${item.amount.toFixed(0)}`, 160, rowCenterY);
+                    const rowCenterY = yPos - 5 + (itemIndex * itemRowHeight) + (itemRowHeight / 2) + 2;
+                    
+                    // Center text horizontally in each column
+                    const sizeText = item.size;
+                    const sizeWidth = doc.getTextWidth(sizeText);
+                    const sizeCenterX = colPositions[2] + (colWidths[2] / 2) - (sizeWidth / 2);
+                    doc.text(sizeText, sizeCenterX, rowCenterY);
+                    
+                    const qtyText = item.qty.toString();
+                    const qtyWidth = doc.getTextWidth(qtyText);
+                    const qtyCenterX = colPositions[3] + (colWidths[3] / 2) - (qtyWidth / 2);
+                    doc.text(qtyText, qtyCenterX, rowCenterY);
+                    
+                    const priceText = item.price.toFixed(0);
+                    const priceWidth = doc.getTextWidth(priceText);
+                    const priceCenterX = colPositions[4] + (colWidths[4] / 2) - (priceWidth / 2);
+                    doc.text(priceText, priceCenterX, rowCenterY);
+                    
+                    const amountText = `${item.amount.toFixed(0)}`;
+                    const amountRightX = colPositions[5] + colWidths[5] - 3; // Right align with 3pt margin
+                    doc.text(amountText, amountRightX, rowCenterY, { align: 'right' });
                 });
                 
                 yPos += groupRequiredHeight;
@@ -546,7 +578,7 @@ class InvoiceGenerator {
         doc.setFont('helvetica', 'bold');
         doc.text('SUBTOTAL', totalX + 3, totalsY + 8);
         doc.setTextColor(0, 0, 0); // Black text for white column
-        doc.text(`${data.subtotal.toFixed(0)}`, totalX + 28, totalsY + 8);
+        doc.text(`${data.subtotal.toFixed(0)}`, totalX + 50 - 3, totalsY + 8, { align: 'right' });
         totalsY += 12;
         
         // Advance row with blue left column and white right column
@@ -567,7 +599,7 @@ class InvoiceGenerator {
         doc.setFont('helvetica', 'bold');
         doc.text('Advance', totalX + 3, totalsY + 8);
         doc.setTextColor(0, 0, 0); // Black text for white column
-        doc.text(`${data.advance.toFixed(0)}`, totalX + 28, totalsY + 8);
+        doc.text(`${data.advance.toFixed(0)}`, totalX + 50 - 3, totalsY + 8, { align: 'right' });
         totalsY += 12;
         
         // Total row with blue left column and white right column
@@ -588,11 +620,12 @@ class InvoiceGenerator {
         doc.setFont('helvetica', 'bold');
         doc.text('TOTAL', totalX + 3, totalsY + 9);
         doc.setTextColor(0, 0, 0); // Black text for white column
-        doc.text(`${data.total.toFixed(0)}`, totalX + 28, totalsY + 9);
+        doc.setFontSize(14); // Match items table font size
+        doc.text(`${data.total.toFixed(0)}`, totalX + 50 - 3, totalsY + 9, { align: 'right' });
         
         // Thank you message - positioned below totals table
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(13);
+        doc.setFontSize(9);
         doc.setTextColor(41, 128, 185); // Blue color
         doc.text('Thank you for your business!', 105, totalsY + 20, { align: 'center' });
         
