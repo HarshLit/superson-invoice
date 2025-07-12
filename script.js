@@ -289,14 +289,14 @@ class InvoiceGenerator {
                 const companyNameWidth = doc.getTextWidth('SUPER SON ENTERPRISE');
                 const imageStartX = 15 + (companyNameWidth / 2) - (targetWidth / 2);
                 doc.addImage(dataURL, 'JPEG', imageStartX, 42, targetWidth, targetHeight);
-                this.completePDFGeneration(doc, data);
+                this.completePDFGenerationAsync(doc, data);
             } catch (error) {
                 console.error('Error converting image to base64:', error);
                 // Fall back to text if image conversion fails
                 doc.setFontSize(9);
                 doc.setFont('helvetica', 'normal');
                 doc.text('Quality Products at Best Rates', 15, 45);
-                this.completePDFGeneration(doc, data);
+                this.completePDFGenerationAsync(doc, data);
             }
         };
         img.onerror = () => {
@@ -304,7 +304,7 @@ class InvoiceGenerator {
             doc.setFontSize(9);
             doc.setFont('helvetica', 'normal');
             doc.text('Quality Products at Best Rates', 15, 45);
-            this.completePDFGeneration(doc, data);
+            this.completePDFGenerationAsync(doc, data);
         };
         img.src = 'Our Logo.jpg';
         
@@ -312,7 +312,52 @@ class InvoiceGenerator {
         return;
     }
 
-    completePDFGeneration(doc, data) {
+    generatePageHeader(doc, data, pageNumber = 1, logoDataURL = null) {
+        // Add page border with slight shadow effect
+        doc.setLineWidth(1);
+        doc.setDrawColor(100, 100, 100); // Gray border
+        doc.rect(10, 10, 190, 277);
+        
+        // Add subtle inner border for depth
+        doc.setLineWidth(0.3);
+        doc.setDrawColor(200, 200, 200); // Light gray
+        doc.rect(12, 12, 186, 273);
+
+        // Header with center alignment - compressed spacing
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Jai Shree Ganesh', 105, 22, { align: 'center' });
+        
+        // Company details section without background - moved up
+        doc.setTextColor(0, 0, 0); // Black text
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('SUPER SON ENTERPRISE', 15, 38);
+        
+        // Add logo image if available
+        if (logoDataURL) {
+            try {
+                // Calculate proper dimensions maintaining aspect ratio (assuming typical logo dimensions)
+                const targetHeight = 25;
+                const targetWidth = 60; // Estimate or calculate from actual image
+                
+                // Center the logo image with the company name
+                const companyNameWidth = doc.getTextWidth('SUPER SON ENTERPRISE');
+                const imageStartX = 15 + (companyNameWidth / 2) - (targetWidth / 2);
+                doc.addImage(logoDataURL, 'JPEG', imageStartX, 42, targetWidth, targetHeight);
+            } catch (error) {
+                console.error('Error adding logo to PDF:', error);
+                // Fall back to text if image fails
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'normal');
+                doc.text('Quality Products at Best Rates', 15, 45);
+            }
+        } else {
+            // Fallback text if no logo
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Quality Products at Best Rates', 15, 45);
+        }
         
         // Invoice title without background
         doc.setTextColor(41, 128, 185); // Blue text only
@@ -426,20 +471,19 @@ class InvoiceGenerator {
         const totalCenterX = rightX + (rightWidth / 2) - (totalTextWidth / 2);
         doc.text(totalText, totalCenterX, sectionY + 32);
 
-        // Items table with blue headers - aligned with sections above
-        let yPos = sectionY + sectionHeight + 8; // Start right after sections with minimal gap
-        const tableWidth = 177; // Match total width of sections above (13 to 190)
-        const tableStartX = 13;
+        // Return the Y position where content can start
+        return sectionY + sectionHeight + 8;
+    }
+
+    generateTableHeader(doc, yPos) {
+        const colWidths = [10, 85, 16, 16, 20, 30];
+        const colPositions = [13, 23, 108, 124, 140, 160];
+        const headerRowHeight = 12;
         
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
         
-        // Define column widths and positions - aligned with sections above
-        const colWidths = [10, 85, 16, 16, 20, 30]; // Much wider description, smaller others
-        const colPositions = [13, 23, 108, 124, 140, 160];
-        
-        // Draw individual header cells with blue background and borders - reduced height
-        const headerRowHeight = 12; // Reduced from 15 to 12
+        // Draw individual header cells with blue background and borders
         colPositions.forEach((pos, index) => {
             doc.setFillColor(41, 128, 185); // Blue color for each cell
             doc.rect(pos, yPos - 5, colWidths[index], headerRowHeight, 'F');
@@ -448,9 +492,9 @@ class InvoiceGenerator {
             doc.rect(pos, yPos - 5, colWidths[index], headerRowHeight);
         });
         
-        // Table headers text in white - adjusted positioning for smaller height
+        // Table headers text in white
         doc.setTextColor(255, 255, 255); // White text
-        doc.setFontSize(12); // Reduced font size
+        doc.setFontSize(12);
         doc.text('SR', 15, yPos - 1);
         doc.text('NO', 15, yPos + 2);
         doc.text('DESCRIPTION', 60, yPos + 1);
@@ -459,9 +503,220 @@ class InvoiceGenerator {
         doc.text('PRICE', 145, yPos + 1);
         doc.text('AMOUNT', 170, yPos + 1);
         
-        yPos += headerRowHeight;
+        return { colWidths, colPositions, newYPos: yPos + headerRowHeight };
+    }
+
+    addRunningSubtotal(doc, pageItems, yPos) {
+        // Calculate subtotal for items on this page
+        let pageSubtotal = 0;
+        pageItems.forEach(item => {
+            pageSubtotal += item.amount;
+        });
+
+        const totalX = 140; // Align with right section
+        const totalWidth = 50;
+        
+        // SUBTOTAL row with blue left column and white right column
+        doc.setFillColor(41, 128, 185); // Blue background
+        doc.rect(totalX, yPos + 5, 25, 12, 'F');
+        doc.setFillColor(255, 255, 255); // White background
+        doc.rect(totalX + 25, yPos + 5, 25, 12, 'F');
+        // Borders
+        doc.setLineWidth(0.5);
+        doc.setDrawColor(0, 0, 0);
+        doc.rect(totalX, yPos + 5, totalWidth, 12);
+        doc.line(totalX + 25, yPos + 5, totalX + 25, yPos + 17);
+        // Text
+        doc.setTextColor(255, 255, 255); // White text for blue column
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('SUBTOTAL', totalX + 3, yPos + 13);
+        doc.setTextColor(0, 0, 0); // Black text for white column
+        doc.text(`${pageSubtotal.toFixed(0)}`, totalX + 50 - 3, yPos + 13, { align: 'right' });
+    }
+
+    addPageNumbering(doc, currentPage, totalPages) {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0, 0, 0);
+        doc.text(`Page ${currentPage} of ${totalPages}`, 190, 285, { align: 'right' });
+    }
+
+    addFinalTotals(doc, data, yPos, allPageItems, signatureDataURL = null) {
+        // Since we already checked for space when adding old due, we shouldn't need another page break here
+        // But let's keep a safety check with a smaller threshold
+        let finalPage = false;
+        
+        if (yPos > 240) { // Reasonable threshold for totals + footer
+            // Need new page for final totals
+            doc.addPage();
+            yPos = 50; // Start near top of page for totals
+            finalPage = true;
+        }
+        
+        // Calculate total subtotal from all items
+        let totalSubtotal = 0;
+        allPageItems.forEach(item => {
+            totalSubtotal += item.amount;
+        });
+        
+        const totalX = 140;
+        const totalWidth = 50;
+        let totalsY = yPos + 5;
+        
+        // SUBTOTAL row
+        doc.setFillColor(41, 128, 185);
+        doc.rect(totalX, totalsY, 25, 12, 'F');
+        doc.setFillColor(255, 255, 255);
+        doc.rect(totalX + 25, totalsY, 25, 12, 'F');
+        doc.setLineWidth(0.5);
+        doc.setDrawColor(0, 0, 0);
+        doc.rect(totalX, totalsY, totalWidth, 12);
+        doc.line(totalX + 25, totalsY, totalX + 25, totalsY + 12);
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('SUBTOTAL', totalX + 3, totalsY + 8);
+        doc.setTextColor(0, 0, 0);
+        doc.text(`${data.subtotal.toFixed(0)}`, totalX + 50 - 3, totalsY + 8, { align: 'right' });
+        totalsY += 12;
+        
+        // Advance row
+        doc.setFillColor(41, 128, 185);
+        doc.rect(totalX, totalsY, 25, 12, 'F');
+        doc.setFillColor(255, 255, 255);
+        doc.rect(totalX + 25, totalsY, 25, 12, 'F');
+        doc.setLineWidth(0.5);
+        doc.setDrawColor(0, 0, 0);
+        doc.rect(totalX, totalsY, totalWidth, 12);
+        doc.line(totalX + 25, totalsY, totalX + 25, totalsY + 12);
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Advance', totalX + 3, totalsY + 8);
+        doc.setTextColor(0, 0, 0);
+        doc.text(`${data.advance.toFixed(0)}`, totalX + 50 - 3, totalsY + 8, { align: 'right' });
+        totalsY += 12;
+        
+        // Total row
+        doc.setFillColor(41, 128, 185);
+        doc.rect(totalX, totalsY, 25, 14, 'F');
+        doc.setFillColor(255, 255, 255);
+        doc.rect(totalX + 25, totalsY, 25, 14, 'F');
+        doc.setLineWidth(0.5);
+        doc.setDrawColor(0, 0, 0);
+        doc.rect(totalX, totalsY, totalWidth, 14);
+        doc.line(totalX + 25, totalsY, totalX + 25, totalsY + 14);
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'bold');
+        doc.text('TOTAL', totalX + 3, totalsY + 9);
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(14);
+        doc.text(`${data.total.toFixed(0)}`, totalX + 50 - 3, totalsY + 9, { align: 'right' });
+        
+        // Thank you message
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(41, 128, 185);
+        doc.text('Thank you for your business!', 105, totalsY + 20, { align: 'center' });
+        
+        // Add footer only on final page
+        this.addFooter(doc, totalsY + 25, signatureDataURL);
+        
+        return { totalPages: finalPage ? 2 : 1 }; // Return if we created an extra page
+    }
+
+    addFooter(doc, yPos, signatureDataURL = null) {
+        // Footer logic (signature, contact info)
+        yPos += 5;
+        
+        // Add a separator line above footer
+        doc.setLineWidth(0.5);
+        doc.setDrawColor(150, 150, 150);
+        doc.line(20, yPos, 190, yPos);
+        yPos += 5;
+        
+        // Add signature image above "Authorized" text if available
+        if (signatureDataURL) {
+            try {
+                doc.addImage(signatureDataURL, 'PNG', 20, yPos - 15, 30, 12); // x, y, width, height
+            } catch (error) {
+                console.error('Error adding signature to PDF:', error);
+            }
+        }
+        
+        // Add "Authorized" text
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text('Authorized', 20, yPos + 20);
+        
+        // Add contact information
+        yPos += 28;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(80, 80, 80);
+        doc.text('If you have any questions about this invoice, please contact', 20, yPos);
+        yPos += 4;
+        doc.setTextColor(41, 128, 185);
+        doc.text('[Mob: 9413121066, email: satyendratie@gmail.com]', 20, yPos);
+    }
+
+    async loadImages() {
+        const loadImage = (src) => {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        const dataURL = canvas.toDataURL(src.includes('.png') ? 'image/png' : 'image/jpeg', 0.9);
+                        resolve(dataURL);
+                    } catch (error) {
+                        console.error(`Error converting ${src} to base64:`, error);
+                        resolve(null);
+                    }
+                };
+                img.onerror = () => {
+                    console.log(`Image ${src} not found`);
+                    resolve(null);
+                };
+                img.src = src;
+            });
+        };
+
+        const [logoDataURL, signatureDataURL] = await Promise.all([
+            loadImage('Our Logo.jpg'),
+            loadImage('sign.png')
+        ]);
+
+        return { logoDataURL, signatureDataURL };
+    }
+
+    async completePDFGenerationAsync(doc, data) {
+        // Load images first
+        const { logoDataURL, signatureDataURL } = await this.loadImages();
+        
+        let currentPage = 1;
+        let yPos = this.generatePageHeader(doc, data, currentPage, logoDataURL);
+        
+        // Generate table header for first page
+        const tableConfig = this.generateTableHeader(doc, yPos);
+        const { colWidths, colPositions } = tableConfig;
+        yPos = tableConfig.newYPos;
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(0, 0, 0); // Black text
+        
+        // Page break constants
+        const pageHeight = 285; // Safe page height (297 - margins)
+        const minSpaceForFooter = 50; // Space for running subtotal only
+        const minSpaceForFinalTotals = 90; // Space needed for final totals + footer (reduced to be less conservative)
+        let pageItems = []; // Track items on current page for subtotal calculation
 
         // Group items by description
         const groupedItems = {};
@@ -474,7 +729,10 @@ class InvoiceGenerator {
 
         // Items with individual cell borders - dynamic row height based on description and grouping
         let currentSrNo = 1;
-        Object.keys(groupedItems).forEach(description => {
+        const groupKeys = Object.keys(groupedItems);
+        
+        for (let groupIndex = 0; groupIndex < groupKeys.length; groupIndex++) {
+            const description = groupKeys[groupIndex];
             const items = groupedItems[description];
             const baseItemHeight = 6;
             const maxDescriptionWidth = colWidths[1] - 4;
@@ -497,6 +755,22 @@ class InvoiceGenerator {
                 // Single item - display normally
                 const item = items[0];
                 const requiredHeight = Math.max(baseItemHeight, descriptionLines.length * 5 + 6);
+                
+                // Check if item fits on current page
+                if (yPos + requiredHeight > pageHeight - minSpaceForFooter) {
+                    // Add running subtotal to current page
+                    this.addRunningSubtotal(doc, pageItems, yPos);
+                    
+                    // Start new page
+                    doc.addPage();
+                    currentPage++;
+                    yPos = this.generatePageHeader(doc, data, currentPage, logoDataURL);
+                    const newTableConfig = this.generateTableHeader(doc, yPos);
+                    yPos = newTableConfig.newYPos;
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(0, 0, 0);
+                    pageItems = []; // Reset page items
+                }
                 
                 // Draw individual cells for the item
                 colPositions.forEach((pos, colIndex) => {
@@ -540,10 +814,29 @@ class InvoiceGenerator {
                 doc.text(amountText, amountRightX, cellCenterY, { align: 'right' });
                 yPos += requiredHeight;
                 currentSrNo++;
+                
+                // Add item to page items for subtotal calculation
+                pageItems.push(item);
             } else {
                 // Multiple items with same description - group them
                 const itemRowHeight = 8; // Height for each size/qty/price/amount row
                 const groupRequiredHeight = Math.max(items.length * itemRowHeight, descriptionLines.length * 5 + 8);
+                
+                // Check if group fits on current page
+                if (yPos + groupRequiredHeight > pageHeight - minSpaceForFooter) {
+                    // Add running subtotal to current page
+                    this.addRunningSubtotal(doc, pageItems, yPos);
+                    
+                    // Start new page
+                    doc.addPage();
+                    currentPage++;
+                    yPos = this.generatePageHeader(doc, data, currentPage, logoDataURL);
+                    const newTableConfig = this.generateTableHeader(doc, yPos);
+                    yPos = newTableConfig.newYPos;
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(0, 0, 0);
+                    pageItems = []; // Reset page items
+                }
                 
                 // Draw cells for the entire group
                 colPositions.forEach((pos, colIndex) => {
@@ -602,12 +895,31 @@ class InvoiceGenerator {
                 
                 yPos += groupRequiredHeight;
                 currentSrNo++;
+                
+                // Add all items in the group to page items for subtotal calculation
+                pageItems.push(...items);
             }
-        });
+        }
         
         // Add old due row if present
         if (data.oldDue.hasOldDue && data.oldDue.amount > 0) {
             const oldDueHeight = 10;
+            
+            // Check if old due row fits on current page (need extra space for final totals)
+            if (yPos + oldDueHeight > pageHeight - minSpaceForFinalTotals) {
+                // Add running subtotal to current page
+                this.addRunningSubtotal(doc, pageItems, yPos);
+                
+                // Start new page
+                doc.addPage();
+                currentPage++;
+                yPos = this.generatePageHeader(doc, data, currentPage);
+                const newTableConfig = this.generateTableHeader(doc, yPos);
+                yPos = newTableConfig.newYPos;
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(0, 0, 0);
+                pageItems = []; // Reset page items
+            }
             
             // Draw grey background for old due row
             doc.setFillColor(220, 220, 220); // Light grey background
@@ -666,190 +978,32 @@ class InvoiceGenerator {
             doc.text(amountText, amountRightX, cellCenterY, { align: 'right' });
             
             yPos += oldDueHeight;
+            
+            // Add old due as an item for subtotal calculation
+            pageItems.push({ amount: data.oldDue.amount });
         }
         
-        // Store final items table position for connecting totals
-        const itemsEndY = yPos;
-
-        // Enhanced totals table - perfectly aligned with right section above
-        const totalsStartY = itemsEndY + 5;
-        const totalWidth = 50; // Match right section width exactly
-        const totalX = 140; // Align exactly with right section X position
+        // Add page numbering and final totals
+        this.addPageNumbering(doc, currentPage, currentPage); // We'll update total pages later
         
-        let totalsY = totalsStartY;
+        // Check if we need space for final totals
+        const totalPageInfo = this.addFinalTotals(doc, data, yPos, pageItems, signatureDataURL);
+        const totalPages = totalPageInfo.totalPages || currentPage;
         
-        // SUBTOTAL row with blue left column and white right column
-        // Blue left column
-        doc.setFillColor(41, 128, 185); // Blue background
-        doc.rect(totalX, totalsY, 25, 12, 'F');
-        // White right column
-        doc.setFillColor(255, 255, 255); // White background
-        doc.rect(totalX + 25, totalsY, 25, 12, 'F');
-        // Borders
-        doc.setLineWidth(0.5);
-        doc.setDrawColor(0, 0, 0); // Black border
-        doc.rect(totalX, totalsY, totalWidth, 12);
-        doc.line(totalX + 25, totalsY, totalX + 25, totalsY + 12);
-        // Text
-        doc.setTextColor(255, 255, 255); // White text for blue column
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.text('SUBTOTAL', totalX + 3, totalsY + 8);
-        doc.setTextColor(0, 0, 0); // Black text for white column
-        doc.text(`${data.subtotal.toFixed(0)}`, totalX + 50 - 3, totalsY + 8, { align: 'right' });
-        totalsY += 12;
-        
-        // Advance row with blue left column and white right column
-        // Blue left column
-        doc.setFillColor(41, 128, 185); // Blue background
-        doc.rect(totalX, totalsY, 25, 12, 'F');
-        // White right column
-        doc.setFillColor(255, 255, 255); // White background
-        doc.rect(totalX + 25, totalsY, 25, 12, 'F');
-        // Borders
-        doc.setLineWidth(0.5);
-        doc.setDrawColor(0, 0, 0); // Black border
-        doc.rect(totalX, totalsY, totalWidth, 12);
-        doc.line(totalX + 25, totalsY, totalX + 25, totalsY + 12);
-        // Text
-        doc.setTextColor(255, 255, 255); // White text for blue column
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Advance', totalX + 3, totalsY + 8);
-        doc.setTextColor(0, 0, 0); // Black text for white column
-        doc.text(`${data.advance.toFixed(0)}`, totalX + 50 - 3, totalsY + 8, { align: 'right' });
-        totalsY += 12;
-        
-        // Total row with blue left column and white right column
-        // Blue left column
-        doc.setFillColor(41, 128, 185); // Blue background
-        doc.rect(totalX, totalsY, 25, 14, 'F');
-        // White right column
-        doc.setFillColor(255, 255, 255); // White background
-        doc.rect(totalX + 25, totalsY, 25, 14, 'F');
-        // Borders
-        doc.setLineWidth(0.5);
-        doc.setDrawColor(0, 0, 0); // Black border
-        doc.rect(totalX, totalsY, totalWidth, 14);
-        doc.line(totalX + 25, totalsY, totalX + 25, totalsY + 14);
-        // Text
-        doc.setTextColor(255, 255, 255); // White text for blue column
-        doc.setFontSize(13);
-        doc.setFont('helvetica', 'bold');
-        doc.text('TOTAL', totalX + 3, totalsY + 9);
-        doc.setTextColor(0, 0, 0); // Black text for white column
-        doc.setFontSize(14); // Match items table font size
-        doc.text(`${data.total.toFixed(0)}`, totalX + 50 - 3, totalsY + 9, { align: 'right' });
-        
-        // Thank you message - positioned below totals table
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.setTextColor(41, 128, 185); // Blue color
-        doc.text('Thank you for your business!', 105, totalsY + 20, { align: 'center' });
-        
-        // Update yPos for footer
-        yPos = totalsY + 15; // Reduced from 25 to 15
-
-        // Footer section with subtle styling - more compact
-        yPos += 5; // Reduced from 10 to 5
-        
-        // Add a separator line above footer
-        doc.setLineWidth(0.5);
-        doc.setDrawColor(150, 150, 150);
-        doc.line(20, yPos, 190, yPos);
-        yPos += 5; // Reduced from 10 to 5
-        
-        // Add signature image above "Authorized" text
-        const signImg = new Image();
-        signImg.onload = function() {
-            try {
-                // Convert signature image to base64
-                const signCanvas = document.createElement('canvas');
-                const signCtx = signCanvas.getContext('2d');
-                signCanvas.width = signImg.width;
-                signCanvas.height = signImg.height;
-                signCtx.drawImage(signImg, 0, 0);
-                const signDataURL = signCanvas.toDataURL('image/png', 0.9);
-                
-                // Add signature image (positioned above "Authorized") - smaller and closer
-                doc.addImage(signDataURL, 'PNG', 20, yPos - 15, 30, 12); // x, y, width, height - reduced size
-                
-                // Add "Authorized" text below the signature
-                doc.setTextColor(0, 0, 0); // Black text
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(10);
-                doc.text('Authorized', 20, yPos);
-                
-                // Add contact information - more compact
-                yPos += 8; // Reduced from 15 to 8
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(9);
-                doc.setTextColor(80, 80, 80); // Slightly gray text
-                doc.text('If you have any questions about this invoice, please contact', 20, yPos);
-                yPos += 4; // Reduced from 5 to 4
-                doc.setTextColor(41, 128, 185); // Blue color for contact info
-                doc.text('[Mob: 9413121066, email: satyendratie@gmail.com]', 20, yPos);
-                
-                // Generate filename with Invoice_Number Customer_Name, Address pattern
-                const cleanCustomerName = data.customerName.replace(/[^a-zA-Z0-9\s]/g, '').trim();
-                const firstAddressLine = data.customerAddress.split('\n')[0].replace(/[^a-zA-Z0-9\s]/g, '').trim();
-                const filename = `${data.invoiceNumber} ${cleanCustomerName}, ${firstAddressLine}.pdf`;
-                
-                // Complete the PDF save
-                doc.save(filename);
-            } catch (error) {
-                console.error('Error loading signature:', error);
-                // Continue without signature
-                doc.setTextColor(0, 0, 0); // Black text
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(10);
-                doc.text('Authorized', 20, yPos);
-                
-                // Add contact information - more compact
-                yPos += 8; // Reduced from 15 to 8
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(9);
-                doc.setTextColor(80, 80, 80); // Slightly gray text
-                doc.text('If you have any questions about this invoice, please contact', 20, yPos);
-                yPos += 4; // Reduced from 5 to 4
-                doc.setTextColor(41, 128, 185); // Blue color for contact info
-                doc.text('[Mob: 9413121066, email: satyendratie@gmail.com]', 20, yPos);
-                
-                // Generate filename with Invoice_Number Customer_Name, Address pattern
-                const cleanCustomerName = data.customerName.replace(/[^a-zA-Z0-9\s]/g, '').trim();
-                const firstAddressLine = data.customerAddress.split('\n')[0].replace(/[^a-zA-Z0-9\s]/g, '').trim();
-                const filename = `${data.invoiceNumber} ${cleanCustomerName}, ${firstAddressLine}.pdf`;
-                
-                doc.save(filename);
+        // Update page numbering on all pages
+        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+            if (pageNum < totalPages) {
+                // Go to specific page and update numbering
+                doc.setPage(pageNum);
+                this.addPageNumbering(doc, pageNum, totalPages);
             }
-        };
-        signImg.onerror = function() {
-            // Continue without signature if image fails to load
-            doc.setTextColor(0, 0, 0); // Black text
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(10);
-            doc.text('Authorized', 20, yPos);
-            
-            // Add contact information
-            yPos += 15;
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(9);
-            doc.setTextColor(80, 80, 80); // Slightly gray text
-            doc.text('If you have any questions about this invoice, please contact', 20, yPos);
-            yPos += 5;
-            doc.setTextColor(41, 128, 185); // Blue color for contact info
-            doc.text('[Mob: 9413121066, email: satyendratie@gmail.com]', 20, yPos);
-            
-            // Generate filename with Invoice_Number Customer_Name, Address pattern
-            const cleanCustomerName = data.customerName.replace(/[^a-zA-Z0-9\s]/g, '').trim();
-            const firstAddressLine = data.customerAddress.split('\n')[0].replace(/[^a-zA-Z0-9\s]/g, '').trim();
-            const filename = `${data.invoiceNumber} ${cleanCustomerName}, ${firstAddressLine}.pdf`;
-            
-            doc.save(filename);
-        };
-        signImg.src = 'sign.png';
-        
-        // Note: Contact info and PDF save are now handled in the signature loading callback above
+        }
+
+        // Generate filename and save PDF
+        const cleanCustomerName = data.customerName.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+        const firstAddressLine = data.customerAddress.split('\n')[0].replace(/[^a-zA-Z0-9\s]/g, '').trim();
+        const filename = `${data.invoiceNumber} ${cleanCustomerName}, ${firstAddressLine}.pdf`;
+        doc.save(filename);
     }
 
     loadInvoicesFromStorage() {
