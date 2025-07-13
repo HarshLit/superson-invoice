@@ -329,7 +329,7 @@ class InvoiceGenerator {
         doc.text('Jai Shree Ganesh', 105, 22, { align: 'center' });
         
         // Company details section without background - moved up
-        doc.setTextColor(0, 0, 0); // Black text
+        doc.setTextColor(41, 128, 185); // Blue text
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
         doc.text('SUPER SON ENTERPRISE', 15, 38);
