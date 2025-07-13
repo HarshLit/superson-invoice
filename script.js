@@ -464,7 +464,7 @@ class InvoiceGenerator {
         
         // Total amount value (bottom part) - centered content
         doc.setTextColor(0, 0, 0); // Black text
-        doc.setFontSize(14); // Consistent with other content
+        doc.setFontSize(15); // Consistent with other content
         doc.setFont('helvetica', 'bold');
         const totalText = `${data.total.toFixed(2)}`;
         const totalTextWidth = doc.getTextWidth(totalText);
@@ -612,8 +612,8 @@ class InvoiceGenerator {
         doc.setFont('helvetica', 'bold');
         doc.text('TOTAL', totalX + 3, totalsY + 9);
         doc.setTextColor(0, 0, 0);
-        doc.setFontSize(14);
-        doc.text(`${data.total.toFixed(0)}`, totalX + 50 - 3, totalsY + 9, { align: 'right' });
+        doc.setFontSize(15);
+        doc.text(`${data.total.toFixed(0)}`, totalX + 50 - 3, totalsY + 9, { align: 'right' , underline: true});
         
         // Thank you message
         doc.setFont('helvetica', 'bold');
