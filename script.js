@@ -612,8 +612,14 @@ class InvoiceGenerator {
         doc.setFont('helvetica', 'bold');
         doc.text('TOTAL', totalX + 3, totalsY + 9);
         doc.setTextColor(0, 0, 0);
-        doc.setFontSize(16);
-        doc.text(`${data.total.toFixed(0)}`, totalX + 50 - 3, totalsY + 9, { align: 'right' , underline: true});
+        doc.setFontSize(18);
+        const totalText = `${data.total.toFixed(0)}`;
+        doc.text(totalText, totalX + 50 - 3, totalsY + 9, { align: 'right' });
+        
+        // Add manual underline
+        const totalTextWidth = doc.getTextWidth(totalText);
+        doc.setLineWidth(0.5);
+        doc.line(totalX + 50 - 3 - totalTextWidth, totalsY + 11, totalX + 50 - 3, totalsY + 11);
         
         // Thank you message
         doc.setFont('helvetica', 'bold');
