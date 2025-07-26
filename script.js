@@ -242,74 +242,8 @@ class InvoiceGenerator {
             console.log('Arial font not available, using default');
         }
 
-        // Add page border with slight shadow effect
-        doc.setLineWidth(1);
-        doc.setDrawColor(100, 100, 100); // Gray border
-        doc.rect(10, 10, 190, 277);
-        
-        // Add subtle inner border for depth
-        doc.setLineWidth(0.3);
-        doc.setDrawColor(200, 200, 200); // Light gray
-        doc.rect(12, 12, 186, 273);
-
-        // Header with center alignment - compressed spacing
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Jai Shree Ganesh', 105, 22, { align: 'center' });
-        
-        // Company details section without background - moved up
-        doc.setTextColor(0, 0, 0); // Black text
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        doc.text('SUPER SON ENTERPRISE', 15, 38);
-        
-        // Add logo image instead of text - with proper async handling
-        const img = new Image();
-        img.crossOrigin = 'anonymous'; // Enable CORS for canvas operations
-        img.onload = () => {
-            try {
-                // Convert image to base64 using canvas
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                ctx.drawImage(img, 0, 0);
-                const dataURL = canvas.toDataURL('image/jpeg', 0.9);
-                
-                // Calculate proper dimensions maintaining aspect ratio
-                const originalWidth = img.width;
-                const originalHeight = img.height;
-                const aspectRatio = originalWidth / originalHeight;
-                
-                // Set target height and calculate width to maintain aspect ratio
-                const targetHeight = 25; // Increased height significantly for better visibility
-                const targetWidth = targetHeight * aspectRatio;
-                
-                // Center the logo image with the company name
-                const companyNameWidth = doc.getTextWidth('SUPER SON ENTERPRISE');
-                const imageStartX = 15 + (companyNameWidth / 2) - (targetWidth / 2);
-                doc.addImage(dataURL, 'JPEG', imageStartX, 42, targetWidth, targetHeight);
-                this.completePDFGenerationAsync(doc, data);
-            } catch (error) {
-                console.error('Error converting image to base64:', error);
-                // Fall back to text if image conversion fails
-                doc.setFontSize(9);
-                doc.setFont('helvetica', 'normal');
-                doc.text('Quality Products at Best Rates', 15, 45);
-                this.completePDFGenerationAsync(doc, data);
-            }
-        };
-        img.onerror = () => {
-            // If image fails to load, show text as fallback
-            doc.setFontSize(9);
-            doc.setFont('helvetica', 'normal');
-            doc.text('Quality Products at Best Rates', 15, 45);
-            this.completePDFGenerationAsync(doc, data);
-        };
-        img.src = 'Our Logo.jpg';
-        
-        // Return early since PDF generation will complete asynchronously
-        return;
+        // Start the async PDF generation process
+        this.completePDFGenerationAsync(doc, data);
     }
 
     generatePageHeader(doc, data, pageNumber = 1, logoDataURL = null) {
@@ -707,6 +641,8 @@ class InvoiceGenerator {
     async completePDFGenerationAsync(doc, data) {
         // Load images first
         const { logoDataURL, signatureDataURL } = await this.loadImages();
+        console.log('Logo loaded:', logoDataURL ? 'Success' : 'Failed');
+        console.log('Signature loaded:', signatureDataURL ? 'Success' : 'Failed');
         
         let currentPage = 1;
         let yPos = this.generatePageHeader(doc, data, currentPage, logoDataURL);
@@ -919,7 +855,7 @@ class InvoiceGenerator {
                 // Start new page
                 doc.addPage();
                 currentPage++;
-                yPos = this.generatePageHeader(doc, data, currentPage);
+                yPos = this.generatePageHeader(doc, data, currentPage, logoDataURL);
                 const newTableConfig = this.generateTableHeader(doc, yPos);
                 yPos = newTableConfig.newYPos;
                 doc.setFont('helvetica', 'normal');
